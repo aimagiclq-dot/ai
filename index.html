@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Logo Generator | Instantly Create Your Perfect Logo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      .checkerboard {
+        background-image:
+            linear-gradient(45deg, #ccc 25%, transparent 25%),
+            linear-gradient(-45deg, #ccc 25%, transparent 25%),
+            linear-gradient(45deg, transparent 75%, #ccc 75%),
+            linear-gradient(-45deg, transparent 75%, #ccc 75%);
+        background-size: 20px 20px;
+        background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+      }
+    </style>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Manrope', 'sans-serif'],
+            },
+            colors: {
+              'brand-primary': '#6336E4', // Canva-style Purple
+              'brand-secondary': '#3D1F68', // Dark Indigo
+              'brand-lavender': '#DDD6F5',
+              'brand-light': '#8a63f5',
+            },
+            boxShadow: {
+              'soft': '0 10px 25px -5px rgba(99, 54, 228, 0.1), 0 8px 10px -6px rgba(99, 54, 228, 0.1)',
+            },
+            animation: {
+              'fade-in-down': 'fade-in-down 0.3s ease-out',
+              'scale-in': 'scale-in 0.3s ease-out',
+              'fade-in': 'fade-in 0.2s ease-out',
+            },
+            keyframes: {
+              'fade-in-down': {
+                '0%': {
+                  opacity: '0',
+                  transform: 'translateY(-10px)',
+                },
+                '100%': {
+                  opacity: '1',
+                  transform: 'translateY(0)',
+                },
+              },
+              'fall': {
+                '0%': {
+                  transform: 'translateY(-10vh) rotateZ(-20deg)',
+                  opacity: '1',
+                },
+                '100%': {
+                  transform: 'translateY(110vh) rotateZ(20deg)',
+                  opacity: '0',
+                },
+              },
+              'scale-in': {
+                '0%': {
+                  opacity: '0',
+                  transform: 'scale(0.95)',
+                },
+                '100%': {
+                  opacity: '1',
+                  transform: 'scale(1)',
+                },
+              },
+              'fade-in': {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              },
+            },
+          },
+        },
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.25.0"
+  }
+}
+</script>
+</head>
+  <body class="bg-gray-100 text-gray-800">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
