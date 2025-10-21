@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import LoadingSpinner from './LoadingSpinner';
 
 const CheckIcon: React.FC = () => (
     <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
@@ -36,7 +35,7 @@ const pricingPlans = {
                 'Advanced editor tools',
                 'Priority email support',
             ],
-            cta: 'Upgrade to Pro',
+            cta: 'Current Plan',
             popular: true,
         },
         {
@@ -87,7 +86,7 @@ const pricingPlans = {
                 'Advanced editor tools',
                 'Priority email support',
             ],
-            cta: 'Upgrade to Pro',
+            cta: 'Current Plan',
             popular: true,
         },
         {
@@ -124,23 +123,15 @@ const FaqItem: React.FC<FaqItemProps> = ({ question, answer }) => {
     );
 }
 
-interface PricingPageProps {
-    onUpgrade: (planId: string) => void;
-    isProcessing: boolean;
-}
-
-const PricingPage: React.FC<PricingPageProps> = ({ onUpgrade, isProcessing }) => {
+const PricingPage: React.FC = () => {
     const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
 
     const plans = pricingPlans[billingCycle];
 
     const handleCtaClick = (plan: typeof plans[0]) => {
-        if (plan.name === 'Pro') {
-            onUpgrade(plan.id);
-        } else if (plan.name === 'Business') {
+        if (plan.name === 'Business') {
             window.location.href = 'mailto:sales@logogen.com';
         }
-        // Free plan has no action here
     };
 
     return (
@@ -186,10 +177,10 @@ const PricingPage: React.FC<PricingPageProps> = ({ onUpgrade, isProcessing }) =>
                             </div>
                             <button
                                 onClick={() => handleCtaClick(plan)}
-                                disabled={isProcessing && plan.name === 'Pro'}
-                                className={`w-full mt-8 py-3 px-6 rounded-lg font-semibold transition-colors flex items-center justify-center disabled:opacity-60 disabled:cursor-wait ${plan.popular ? 'bg-brand-primary text-white hover:opacity-90' : 'bg-brand-lavender text-brand-primary hover:bg-brand-primary/20'}`}
+                                disabled={plan.name === 'Pro'}
+                                className={`w-full mt-8 py-3 px-6 rounded-lg font-semibold transition-colors flex items-center justify-center disabled:opacity-60 disabled:cursor-default ${plan.popular ? 'bg-brand-primary text-white hover:opacity-90' : 'bg-brand-lavender text-brand-primary hover:bg-brand-primary/20'}`}
                             >
-                                {isProcessing && plan.name === 'Pro' ? <LoadingSpinner /> : plan.cta}
+                                {plan.cta}
                             </button>
                             <ul className="mt-8 space-y-4">
                                 {plan.features.map(feature => (

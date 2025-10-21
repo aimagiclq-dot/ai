@@ -76,6 +76,10 @@ export interface LogoGenerationParams {
     colors: {name: string}[];
     fonts: FontStyle[];
     prompt?: string;
+    referenceImage?: string;
+    layout?: 'icon-top' | 'icon-left' | 'icon-right' | 'icon-only' | 'text-only';
+    iconDescription?: string;
+    style?: string;
 }
   
 export interface Variation {

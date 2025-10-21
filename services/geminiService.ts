@@ -1,14 +1,5 @@
 import { GoogleGenAI, Modality, Type } from "@google/genai";
-import { FontStyle, Industry, Layer, Background, TextElement, ShapeElement } from "../types";
-
-interface LogoGenerationParams {
-    name: string;
-    slogan?: string;
-    industry: Industry | null;
-    colors: { name: string }[];
-    fonts: FontStyle[];
-    prompt?: string;
-}
+import { FontStyle, Industry, Layer, Background, TextElement, ShapeElement, LogoGenerationParams } from "../types";
 
 export const prepareImageParts = (base64Images: string[]): { inlineData: { data: string, mimeType: string } }[] => {
     return base64Images.map(url => {
@@ -29,9 +20,7 @@ export async function callGeminiImageModel(prompt: string, images: { inlineData:
     }
 
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-    const parts = [...images, { text: prompt }];
-    const contents = { parts };
+    const contents = { parts: [...images, { text: prompt }] };
 
     try {
         const response = await ai.models.generateContent({
@@ -44,70 +33,123 @@ export async function callGeminiImageModel(prompt: string, images: { inlineData:
 
         const candidate = response?.candidates?.[0];
 
-        // Handle cases where the response is empty or blocked.
-        if (!candidate || !candidate.content || !candidate.content.parts) {
-            console.error("Invalid response structure from Gemini, no content found:", response);
-            const isSafetyBlock = candidate?.finishReason === 'SAFETY';
-            if (isSafetyBlock) {
-                throw new Error("The request was blocked by the AI's safety settings. Please modify your prompt.");
-            }
-            throw new Error("The AI returned an empty or invalid response. This can happen due to safety filters or an unclear prompt.");
+        if (!candidate) {
+            console.error("Invalid response from Gemini: No candidates found.", response);
+            throw new Error("The AI returned an empty response. This may be due to a network issue or a problem with the prompt.");
         }
 
-        // Check for non-STOP finish reasons, especially safety.
-        if (candidate.finishReason && candidate.finishReason !== 'STOP') {
-             console.warn('Gemini response finished with reason:', candidate.finishReason);
-             if (candidate.finishReason === 'SAFETY') {
-                throw new Error("The request was blocked by the AI's safety settings. Please modify your prompt.");
-             }
+        const finishReason = candidate.finishReason;
+
+        if (finishReason !== 'STOP') {
+            console.warn(`Gemini response finished with non-STOP reason: ${finishReason}`, candidate.safetyRatings);
+            if (finishReason === 'SAFETY') {
+                throw new Error("The request was blocked for safety reasons. Please adjust your prompt and try again.");
+            }
+            if (finishReason === 'RECITATION') {
+                throw new Error("The request was blocked due to potential recitation of copyrighted content. Please rephrase your prompt.");
+            }
+            throw new Error(`The AI could not complete the request (Reason: ${finishReason}). Please try again or modify your prompt.`);
         }
         
-        // Find the first part that contains image data.
+        if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
+            console.error("Invalid response structure: No content parts found despite a successful finish reason.", response);
+            throw new Error("The AI returned an invalid response structure. Please try again.");
+        }
+
         const imagePart = candidate.content.parts.find(part => part.inlineData);
 
         if (imagePart?.inlineData) {
-            const base64ImageBytes: string = imagePart.inlineData.data;
-            return `data:image/png;base64,${base64ImageBytes}`;
+            return `data:image/png;base64,${imagePart.inlineData.data}`;
         }
 
-        // If we reach here, no image was found in a successful response.
-        console.error("Invalid response structure from Gemini:", response);
-        throw new Error("No image data found in the AI response. The prompt may have been blocked or the response was empty.");
+        console.error("No image data in Gemini response parts:", response);
+        throw new Error("The AI response did not contain an image. Please try adjusting your prompt to be more specific about creating an image.");
 
     } catch (error) {
-        console.error("Error interacting with Gemini:", error);
-        // Propagate specific, user-friendly errors.
-        if (error instanceof Error && (error.message.includes("safety settings") || error.message.includes("invalid response"))) {
-            throw error;
+        console.error("Error interacting with Gemini in callGeminiImageModel:", error);
+        if (error instanceof Error) {
+            // Re-throw specific, user-friendly errors we've already created.
+            if (error.message.startsWith("The request was blocked") || error.message.startsWith("The AI could not complete")) {
+                throw error;
+            }
+            // Attempt to parse detailed API errors from the message.
+            try {
+                const apiError = JSON.parse(error.message);
+                if (apiError.error) {
+                    if (apiError.error.code === 429) {
+                        throw new Error("You've exceeded your API request quota. Please check your plan and billing details.");
+                    }
+                    if (apiError.error.message) {
+                        throw new Error(`The AI service returned an error: ${apiError.error.message}`);
+                    }
+                }
+            } catch (e) {
+                // Not a JSON error message, fall through to generic error.
+            }
         }
-        // Fallback to a generic error message.
-        throw new Error("Failed to process image with AI.");
+        // Fallback for network errors or other unexpected issues.
+        throw new Error("Failed to process the image with AI due to a network or server error.");
     }
 }
 
-export async function generateLogo({ name, slogan, industry, colors, fonts, prompt: extraPrompt }: LogoGenerationParams): Promise<string> {
-    let prompt = `Create a professional, modern, and clean logo for a company named "${name}".`;
-    if (slogan) {
-        prompt += ` The company's slogan is "${slogan}".`;
+export async function generateLogo({ name, slogan, industry, colors, fonts, prompt: extraPrompt, referenceImage, layout, iconDescription, style }: LogoGenerationParams): Promise<string> {
+    let prompt = `Design a professional, modern logo for a company named "${name}".`;
+
+    if (style) {
+        prompt += ` The style should be: ${style}.`;
+    }
+
+    // Handle layout and icon/text instructions
+    switch (layout) {
+        case 'icon-only':
+            prompt += ` The logo must be an icon only, without any text. The icon should represent: "${iconDescription || name}".`;
+            break;
+        case 'text-only':
+            prompt += ` The logo must be a text-only wordmark (a logotype). Do not include any icons or symbols.`;
+            break;
+        case 'icon-top':
+            prompt += ` The logo should have an icon positioned above the company name. The icon should represent: "${iconDescription || name}".`;
+            break;
+        case 'icon-left':
+            prompt += ` The logo should have an icon positioned to the left of the company name. The icon should represent: "${iconDescription || name}".`;
+            break;
+        case 'icon-right':
+            prompt += ` The logo should have an icon positioned to the right of the company name. The icon should represent: "${iconDescription || name}".`;
+            break;
+        default: // Default to icon-top if layout is not provided but description is
+            if (iconDescription) {
+                prompt += ` The logo should have an icon positioned above the company name, representing: "${iconDescription}".`;
+            }
+            break;
+    }
+
+    if (slogan && layout !== 'icon-only') {
+        prompt += ` If appropriate for the design, include the slogan "${slogan}".`;
     }
     if (industry) {
-        prompt += ` The industry is ${industry.name}.`;
+        prompt += ` The company is in the ${industry.name} industry.`;
     }
     if (colors.length > 0) {
-        const colorNames = colors.map(c => c.name.toLowerCase()).join(' and ');
-        prompt += ` The desired color palette is ${colorNames}.`;
+        const colorNames = colors.map(c => c.name).join(', ');
+        prompt += ` Use a color palette inspired by these colors: ${colorNames}.`;
     }
-    if (fonts.length > 0) {
+    if (fonts.length > 0 && layout !== 'icon-only') {
         const fontNames = fonts.map(f => f.name).join(' or ');
-        prompt += ` The font style should be in the style of ${fontNames}.`;
+        prompt += ` The font should have a style similar to ${fontNames}.`;
     }
-     if (extraPrompt) {
-        prompt += ` Additional instructions: ${extraPrompt}.`
+    if (referenceImage) {
+        prompt += ` Strongly base the style, colors, and composition on the provided reference image, but create a unique design.`;
     }
-    prompt += ' The logo should be iconic, memorable, and vector-friendly. Provide the logo on a solid white background unless other background colors are specified. The output must be a high-quality PNG. Do not include any text other than the company name and slogan if provided.'
-
-    return callGeminiImageModel(prompt, []);
+    if (extraPrompt) {
+        prompt += ` Additional user instructions: ${extraPrompt}.`;
+    }
+    
+    prompt += ' The logo must be on a solid, plain, non-textured, pure white background (#FFFFFF). This simple background will be removed later. Do not use a transparent or checkerboard background. Output a high-quality, clean PNG. Do not include any text other than the company name and slogan if they are part of the design.';
+    
+    const imageParts = referenceImage ? prepareImageParts([referenceImage]) : [];
+    return callGeminiImageModel(prompt, imageParts);
 }
+
 
 const getCompositingInstructions = (layers: Layer[], background: Background): { instructions: string, imageParts: { inlineData: { data: string, mimeType: string } }[] } => {
     let instructions = `You are a precise graphic design assistant. Your task is to composite several elements onto a canvas. Follow these instructions exactly in order.`;
@@ -234,7 +276,22 @@ export async function vectorizeLogo(layers: Layer[], background: Background): Pr
             contents: { parts: [...imageParts, {text: prompt}] },
         });
 
+        const candidate = response?.candidates?.[0];
+
+        if (!candidate || (candidate.finishReason !== 'STOP' && candidate.finishReason !== 'MAX_TOKENS')) {
+            const finishReason = candidate?.finishReason || 'UNKNOWN';
+            console.warn(`Gemini response for vectorization finished with non-STOP reason: ${finishReason}`, candidate?.safetyRatings);
+            if (finishReason === 'SAFETY') {
+                throw new Error("The vectorization request was blocked for safety reasons.");
+            }
+            throw new Error(`The AI could not vectorize the logo (Reason: ${finishReason}).`);
+        }
+
         let svgContent = response.text;
+
+        if (!svgContent || svgContent.trim() === '') {
+            throw new Error("The AI returned an empty response for vectorization.");
+        }
         
         const svgMatch = svgContent.match(/<svg[\s\S]*?<\/svg>/);
         if (svgMatch) {
@@ -251,12 +308,30 @@ export async function vectorizeLogo(layers: Layer[], background: Background): Pr
 
     } catch (error) {
         console.error("Error vectorizing logo with Gemini:", error);
+        if (error instanceof Error) {
+            if (error.message.startsWith("The vectorization request was blocked")) {
+                throw error;
+            }
+            try {
+                const apiError = JSON.parse(error.message);
+                if (apiError.error) {
+                    if (apiError.error.code === 429) {
+                        throw new Error("You've exceeded your API request quota. Please check your plan and billing details.");
+                    }
+                    if (apiError.error.message) {
+                        throw new Error(`The AI service returned an error: ${apiError.error.message}`);
+                    }
+                }
+            } catch (e) {
+                // Not a JSON error message, fall through to generic error.
+            }
+        }
         throw new Error("Failed to vectorize logo.");
     }
 }
 
 export async function vectorizeImageToLayers(base64Image: string): Promise<Layer[]> {
-    const prompt = "Analyze the provided logo image. Deconstruct it into its fundamental components: text elements and simple shapes (rectangles, circles). Provide the result as a JSON array where each object represents a single component. For each component, specify its type ('text' or 'shape'), its position (x, y), and its size (width, height) as percentages of the total canvas. Also include specific properties: for text, include the text content, color, approximate fontSize in pixels, fontFamily (suggest a common web font like 'Arial' or 'Helvetica'), fontWeight ('normal' or 'bold'), fontStyle ('normal' or 'italic'), and textAlign ('left', 'center', or 'right'). For shapes, include the shape type ('rectangle' or 'circle') and its color. All colors must be in hex format.";
+    const prompt = "Analyze the provided logo image. Deconstruct it into its fundamental components: text elements and simple shapes (rectangles, circles). Provide the result as a JSON array where each object represents a single component. For each component, specify its type ('text' or 'shape'), its position (x, y), and its size (width, height) as percentages of the total canvas. Also include specific properties: for text, include the text content, color, approximate fontSize in pixels, fontFamily (suggest a common web font like 'Arial' or 'Helvetica'), fontWeight ('normal' or 'bold'), fontStyle ('normal' or 'italic'), and textAlign ('left', 'center', 'right'). For shapes, include the shape type ('rectangle' or 'circle') and its color. All colors must be in hex format.";
 
     const imageParts = prepareImageParts([base64Image]);
 
@@ -295,7 +370,22 @@ export async function vectorizeImageToLayers(base64Image: string): Promise<Layer
             },
         });
         
+        const candidate = response?.candidates?.[0];
+
+        if (!candidate || (candidate.finishReason !== 'STOP' && candidate.finishReason !== 'MAX_TOKENS')) {
+            const finishReason = candidate?.finishReason || 'UNKNOWN';
+            console.warn(`Gemini response for layer vectorization finished with non-STOP reason: ${finishReason}`, candidate?.safetyRatings);
+            if (finishReason === 'SAFETY') {
+                throw new Error("The layer vectorization request was blocked for safety reasons.");
+            }
+            throw new Error(`The AI could not deconstruct the logo (Reason: ${finishReason}).`);
+        }
+
         let jsonStr = response.text.trim();
+        if (!jsonStr) {
+            throw new Error("The AI returned an empty JSON response.");
+        }
+        
         const parsedLayers: any[] = JSON.parse(jsonStr);
 
         return parsedLayers.map((layerData, index) => {
@@ -336,6 +426,24 @@ export async function vectorizeImageToLayers(base64Image: string): Promise<Layer
 
     } catch (error) {
         console.error("Error vectorizing logo to layers with Gemini:", error);
-        throw new Error("Failed to vectorize logo.");
+        if (error instanceof Error) {
+            if (error.message.startsWith("The layer vectorization request was blocked")) {
+                throw error;
+            }
+            try {
+                const apiError = JSON.parse(error.message);
+                if (apiError.error) {
+                    if (apiError.error.code === 429) {
+                        throw new Error("You've exceeded your API request quota. Please check your plan and billing details.");
+                    }
+                    if (apiError.error.message) {
+                        throw new Error(`The AI service returned an error: ${apiError.error.message}`);
+                    }
+                }
+            } catch (e) {
+                // Not a JSON error message, fall through to generic error.
+            }
+        }
+        throw new Error("Failed to deconstruct logo into layers.");
     }
 }

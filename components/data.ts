@@ -3,7 +3,8 @@ import {
   TravelIcon, SportsIcon, RetailIcon, ReligiousIcon, RealEstateIcon, LegalIcon,
   InternetIcon, TechnologyIcon, HomeIcon, EventsIcon, MedicalIcon, RestaurantIcon,
   FinanceIcon, NonprofitIcon, EntertainmentIcon, ConstructionIcon, EducationIcon,
-  BeautyIcon, AutomotiveIcon, AnimalsIcon, OtherIcon
+  BeautyIcon, AutomotiveIcon, AnimalsIcon, OtherIcon, MinimalistIcon, GeometricIcon,
+  AbstractIcon, VintageIcon, FuturisticIcon, ThreeDIcon, NeonIcon, WatercolorIcon, HandDrawnIcon
 } from './icons';
 
 export const industries: Industry[] = [
@@ -29,6 +30,19 @@ export const industries: Industry[] = [
   { name: 'Animals/Pets', icon: AnimalsIcon },
   { name: 'Others', icon: OtherIcon },
 ];
+
+export const logoStyles = [
+    { name: 'Minimalist', icon: MinimalistIcon },
+    { name: 'Geometric', icon: GeometricIcon },
+    { name: 'Abstract', icon: AbstractIcon },
+    { name: 'Vintage', icon: VintageIcon },
+    { name: 'Futuristic', icon: FuturisticIcon },
+    { name: '3D', icon: ThreeDIcon },
+    { name: 'Neon', icon: NeonIcon },
+    { name: 'Watercolor', icon: WatercolorIcon },
+    { name: 'Hand-drawn', icon: HandDrawnIcon },
+];
+
 
 export const colorPalettes: ColorPalette[] = [
   {
@@ -60,6 +74,36 @@ export const colorPalettes: ColorPalette[] = [
       { name: 'Steel Gray', hex: '#71797E' },
       { name: 'Sky Blue', hex: '#87CEEB' },
       { name: 'White', hex: '#FFFFFF' },
+    ],
+  },
+  {
+    name: 'Sunset Glow',
+    description: 'Warm, inviting, and serene.',
+    colors: [
+      { name: 'Dark Purple', hex: '#3B1F50' },
+      { name: 'Fuchsia', hex: '#D6336C' },
+      { name: 'Orange', hex: '#FCA652' },
+      { name: 'Light Yellow', hex: '#F2E8C9' },
+    ],
+  },
+  {
+    name: 'Oceanic Deep',
+    description: 'Calm, deep, and professional.',
+    colors: [
+      { name: 'Deep Teal', hex: '#003B46' },
+      { name: 'Medium Teal', hex: '#07575B' },
+      { name: 'Light Seafoam', hex: '#66A5AD' },
+      { name: 'White Sand', hex: '#C4DFE6' },
+    ],
+  },
+  {
+    name: 'Earthy & Natural',
+    description: 'Organic, grounded, and wholesome.',
+    colors: [
+      { name: 'Forest Green', hex: '#2C5F2D' },
+      { name: 'Moss Green', hex: '#97BC62' },
+      { name: 'Rich Brown', hex: '#5E412F' },
+      { name: 'Beige', hex: '#FCEBB6' },
     ],
   },
 ];
@@ -98,6 +142,8 @@ export const fontStyles: FontStyle[] = [
   { name: 'Raleway', className: 'font-raleway', family: "'Raleway', sans-serif", tags: ['Sans-Serif', 'Elegant', 'Minimalist'] },
   { name: 'Oswald', className: 'font-oswald', family: "'Oswald', sans-serif", tags: ['Sans-Serif', 'Display', 'Bold', 'Modern'] },
   { name: 'Nunito', className: 'font-nunito', family: "'Nunito', sans-serif", tags: ['Sans-Serif', 'Fun', 'Modern'] },
+  { name: 'Manrope', className: 'font-manrope', family: "'Manrope', sans-serif", tags: ['Sans-Serif', 'Modern', 'Minimalist'] },
+  { name: 'Syne', className: 'font-syne', family: "'Syne', sans-serif", tags: ['Sans-Serif', 'Display', 'Bold', 'Modern'] },
   
   // Serif - Elegant & Classic
   { name: 'Playfair Display', className: 'font-playfair', family: "'Playfair Display', serif", tags: ['Serif', 'Elegant', 'Classic'] },
@@ -106,6 +152,8 @@ export const fontStyles: FontStyle[] = [
   { name: 'Arvo', className: 'font-arvo', family: "'Arvo', serif", tags: ['Serif', 'Bold', 'Modern'] },
   { name: 'PT Serif', className: 'font-pt-serif', family: "'PT Serif', serif", tags: ['Serif', 'Classic', 'Elegant'] },
   { name: 'Cormorant Garamond', className: 'font-cormorant', family: "'Cormorant Garamond', serif", tags: ['Serif', 'Elegant', 'Classic'] },
+  { name: 'Libre Baskerville', className: 'font-libre-baskerville', family: "'Libre Baskerville', serif", tags: ['Serif', 'Classic', 'Elegant'] },
+  { name: 'Bitter', className: 'font-bitter', family: "'Bitter', serif", tags: ['Serif', 'Bold', 'Modern'] },
 
   // Display - Bold & Fun
   { name: 'Lobster', className: 'font-lobster', family: "'Lobster', cursive", tags: ['Display', 'Handwriting', 'Fun'] },
@@ -114,6 +162,8 @@ export const fontStyles: FontStyle[] = [
   { name: 'Anton', className: 'font-anton', family: "'Anton', sans-serif", tags: ['Display', 'Bold', 'Modern'] },
   { name: 'Righteous', className: 'font-righteous', family: "'Righteous', cursive", tags: ['Display', 'Fun', 'Modern'] },
   { name: 'Fredoka One', className: 'font-fredoka', family: "'Fredoka One', cursive", tags: ['Display', 'Fun', 'Bold'] },
+  { name: 'Unica One', className: 'font-unica-one', family: "'Unica One', cursive", tags: ['Display', 'Futuristic', 'Minimalist', 'Modern'] },
+  { name: 'Abril Fatface', className: 'font-abril-fatface', family: "'Abril Fatface', cursive", tags: ['Display', 'Elegant', 'Classic', 'Bold'] },
 
   // Handwriting - Fun & Elegant
   { name: 'Pacifico', className: 'font-pacifico', family: "'Pacifico', cursive", tags: ['Handwriting', 'Fun', 'Classic'] },
@@ -122,6 +172,8 @@ export const fontStyles: FontStyle[] = [
   { name: 'Sacramento', className: 'font-sacramento', family: "'Sacramento', cursive", tags: ['Handwriting', 'Elegant', 'Minimalist'] },
   { name: 'Indie Flower', className: 'font-indie-flower', family: "'Indie Flower', cursive", tags: ['Handwriting', 'Fun'] },
   { name: 'Satisfy', className: 'font-satisfy', family: "'Satisfy', cursive", tags: ['Handwriting', 'Elegant'] },
+  { name: 'Kalam', className: 'font-kalam', family: "'Kalam', cursive", tags: ['Handwriting', 'Fun', 'Hand-drawn'] },
+  { name: 'Patrick Hand', className: 'font-patrick-hand', family: "'Patrick Hand', cursive", tags: ['Handwriting', 'Fun', 'Minimalist'] },
   
   // Monospace
   { name: 'Source Code Pro', className: 'font-source-code', family: "'Source Code Pro', monospace", tags: ['Monospace', 'Modern'] },
@@ -162,6 +214,14 @@ function loadFonts() {
     'Satisfy',
     'Source+Code+Pro:ital,wght@0,400;0,700;1,400;1,700',
     'Inconsolata:wght@400;700',
+    'Manrope:wght@400;700',
+    'Syne:wght@400;700;800',
+    'Libre+Baskerville:ital,wght@0,400;0,700;1,400',
+    'Bitter:ital,wght@0,400;0,700;1,400',
+    'Unica+One',
+    'Abril+Fatface',
+    'Kalam:wght@400;700',
+    'Patrick+Hand',
   ];
 
   const link = document.createElement('link');

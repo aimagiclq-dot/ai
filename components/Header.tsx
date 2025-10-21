@@ -15,13 +15,9 @@ const LogoIcon = () => (
 
 interface HeaderProps {
     onNavigate: (page: 'home' | 'pricing' | 'how-it-works' | 'faq' | 'dashboard') => void;
-    isAuthenticated: boolean;
-    onLoginClick: () => void;
-    onSignupClick: () => void;
-    onLogoutClick: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onNavigate, isAuthenticated, onLoginClick, onSignupClick, onLogoutClick }) => {
+const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
   return (
     <header className="container mx-auto px-4 py-6">
       <nav className="flex items-center justify-between">
@@ -34,21 +30,9 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, isAuthenticated, onLoginCli
           <button onClick={() => onNavigate('pricing')} className="text-gray-600 hover:text-brand-primary font-medium transition-colors">Pricing</button>
           <button onClick={() => onNavigate('faq')} className="text-gray-600 hover:text-brand-primary font-medium transition-colors">FAQ</button>
           <div className="w-px h-6 bg-gray-200"></div>
-          {isAuthenticated ? (
-            <>
-                <button onClick={() => onNavigate('dashboard')} className="text-gray-600 hover:text-brand-primary font-medium transition-colors">My Account</button>
-                <button onClick={onLogoutClick} className="bg-brand-primary text-white font-semibold px-5 py-2.5 rounded-full hover:opacity-90 transition-opacity">
-                    Log Out
-                </button>
-            </>
-          ) : (
-            <>
-                <button onClick={onLoginClick} className="text-gray-600 hover:text-brand-primary font-medium transition-colors">Log In</button>
-                <button onClick={onSignupClick} className="bg-brand-primary text-white font-semibold px-5 py-2.5 rounded-full hover:opacity-90 transition-opacity">
-                    Sign Up
-                </button>
-            </>
-          )}
+          <button onClick={() => onNavigate('dashboard')} className="bg-brand-primary text-white font-semibold px-5 py-2.5 rounded-full hover:opacity-90 transition-opacity">
+              My Account
+          </button>
         </div>
       </nav>
     </header>

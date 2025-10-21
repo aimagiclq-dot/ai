@@ -91,7 +91,7 @@ const DesignPanel: React.FC<DesignPanelProps> = ({
                 const transparentUrl = await removeBackground(layers);
                 downloadFile(transparentUrl, 'png');
             } else if (action === 'svg') {
-                const svgCode = await vectorizeLogo(layers, historyItem.background);
+                const svgCode = await vectorizeLogo(layers, { type: 'transparent' });
                 downloadFile(svgCode, 'svg');
             } else if (action === 'upscale') {
                 const upscaledUrl = await upscaleLogo(layers, historyItem.background);

@@ -2,7 +2,6 @@ import React from 'react';
 import { LogoAsset, User } from '../../types';
 import ImageDisplay from '../ImageDisplay';
 import { EditIcon, DownloadIcon } from '../icons';
-import Watermark from '../Watermark';
 
 interface HistoryGalleryProps {
     logoHistory: LogoAsset[];
@@ -11,7 +10,6 @@ interface HistoryGalleryProps {
 }
 
 const HistoryGallery: React.FC<HistoryGalleryProps> = ({ logoHistory, onEditLogo, user }) => {
-    const showWatermark = user?.plan === 'free';
     
     const handleDownload = (imageUrl: string) => {
         const link = document.createElement('a');
@@ -37,9 +35,8 @@ const HistoryGallery: React.FC<HistoryGalleryProps> = ({ logoHistory, onEditLogo
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                 {logoHistory.map(asset => (
                     <div key={asset.id} className="group relative space-y-3 flex flex-col">
-                        <div className="relative bg-gray-50 rounded-2xl p-2 shadow-sm flex-grow">
+                        <div className="relative bg-transparent rounded-2xl flex-grow">
                             <ImageDisplay imageUrl={asset.imageUrl} />
-                            {showWatermark && <Watermark />}
                         </div>
                         <div className="flex items-center gap-2">
                             <button

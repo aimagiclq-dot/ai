@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Background, HistoryItem, Layer, ImageElement } from '../../types';
 import { generateAiBackground } from '../../services/geminiService';
 import ImageUploader from '../ImageUploader';
-import { MagicIcon } from '../icons';
+import { MagicIcon, ImageIcon } from '../icons';
 import Tooltip from '../Tooltip';
 
 interface BackgroundPanelProps {
@@ -62,10 +62,10 @@ const BackgroundPanel: React.FC<BackgroundPanelProps> = ({
     return (
         <div className="space-y-6">
             <div className="pb-4 border-b border-gray-200">
-                <Tooltip content="Remove Logo Background (make transparent)">
+                <Tooltip content="Make logo background transparent">
                     <div className="flex items-center justify-between">
                         <label htmlFor="bg-toggle" className="font-bold text-gray-800 cursor-pointer">
-                            Remove Background
+                            Transparent Background
                         </label>
                         <button
                             id="bg-toggle"
@@ -104,26 +104,27 @@ const BackgroundPanel: React.FC<BackgroundPanelProps> = ({
                 </div>
             
                 <div>
-                    <h3 className="font-bold text-gray-800 mb-2">Upload Image</h3>
-                    <ImageUploader onUpload={handleBgUpload} />
+                    <h3 className="font-bold text-gray-800 mb-2 flex items-center gap-2"><ImageIcon className="w-5 h-5"/> Upload Image</h3>
+                    <ImageUploader onUpload={handleBgUpload} compact />
                 </div>
-
-                <div>
-                    <h3 className="font-bold text-gray-800 mb-2 flex items-center gap-2"><MagicIcon className="w-5 h-5"/> Generate with AI</h3>
-                    <textarea
-                        value={bgPrompt}
-                        onChange={e => setBgPrompt(e.target.value)}
-                        placeholder="e.g., a dark wood texture"
-                        className="w-full h-20 p-2 border border-gray-300 rounded-md shadow-sm text-sm"
-                    />
-                    <button
-                        onClick={handleGenerateAiBackground}
-                        disabled={!bgPrompt.trim() || isProcessing}
-                        className="w-full mt-2 bg-brand-primary text-white font-semibold py-2 rounded-md hover:opacity-90 transition-opacity disabled:opacity-50"
-                    >
-                        Generate
-                    </button>
-                </div>
+            </div>
+            
+             <div className="!mt-6 pt-6 border-t border-gray-200">
+                <h3 className="font-bold text-gray-800 mb-2 flex items-center gap-2"><MagicIcon className="w-5 h-5"/> Generate Background with AI</h3>
+                 <p className="text-sm text-gray-600 mb-3">Describe a scene and the AI will place your current logo on it.</p>
+                <textarea
+                    value={bgPrompt}
+                    onChange={e => setBgPrompt(e.target.value)}
+                    placeholder="e.g., a dark wood texture, a futuristic cityscape"
+                    className="w-full h-20 p-2 border border-gray-300 rounded-md shadow-sm text-sm"
+                />
+                <button
+                    onClick={handleGenerateAiBackground}
+                    disabled={!bgPrompt.trim() || isProcessing}
+                    className="w-full mt-2 bg-brand-primary text-white font-semibold py-2 rounded-md hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                    Generate
+                </button>
             </div>
         </div>
     );

@@ -6,7 +6,7 @@ interface ImageDisplayProps {
 
 const ImageDisplay: React.FC<ImageDisplayProps> = ({ imageUrl }) => {
   return (
-    <div className="w-full h-full bg-gray-100 rounded-2xl flex items-center justify-center p-8 aspect-square">
+    <div className="w-full h-full bg-transparent rounded-2xl flex items-center justify-center aspect-square">
       <img 
         src={imageUrl} 
         alt="Generated Logo" 

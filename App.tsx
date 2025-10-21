@@ -1,18 +1,14 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import Header from './components/Header';
 import GeneratorForm from './components/GeneratorForm';
-import LogoEditor from './components/LogoEditor';
+import ThirdPartyEditor from './components/ThirdPartyEditor';
 import LogoGrid from './components/LogoGrid';
 import PricingPage from './components/PricingPage';
 import HowItWorksPage from './components/HowItWorksPage';
 import FaqPage from './components/FaqPage';
-import AuthModal from './components/AuthModal';
 import DashboardPage from './components/dashboard/DashboardPage';
-import StripeRedirectOverlay from './components/StripeRedirectOverlay';
-import UpgradeSuccessModal from './components/UpgradeSuccessModal';
-import { generateLogo } from './services/geminiService';
-import { createCheckoutSession, createCustomerPortalSession } from './services/stripeService';
-import { BrandColor, FontStyle, Industry, HistoryItem, Variation, LogoGenerationParams, ImageElement, User, LogoAsset } from './types';
+import { generateLogo, removeImageBackground } from './services/geminiService';
+import { BrandColor, FontStyle, Industry, Variation, LogoGenerationParams, User, LogoAsset } from './types';
 import { LoadingRobotIcon } from './components/icons';
 
 type Page = 'home' | 'pricing' | 'how-it-works' | 'faq' | 'dashboard';
@@ -25,59 +21,42 @@ const App: React.FC = () => {
   const [customIndustry, setCustomIndustry] = useState('');
   const [selectedColors, setSelectedColors] = useState<BrandColor[]>([]);
   const [selectedFonts, setSelectedFonts] = useState<FontStyle[]>([]);
+  const [referenceImage, setReferenceImage] = useState<string>('');
+  const [logoStyle, setLogoStyle] = useState<string>('');
+  const [layout, setLayout] = useState<LogoGenerationParams['layout']>('icon-top');
+  const [iconDescription, setIconDescription] = useState<string>('');
+
 
   const [apiError, setApiError] = useState<string | null>(null);
   const [generationStatus, setGenerationStatus] = useState<GenerationStatus>('idle');
   
   const [logoVariations, setLogoVariations] = useState<Variation[]>([]);
-  const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [editingImageUrl, setEditingImageUrl] = useState<string | null>(null);
+  const [isRemovingBg, setIsRemovingBg] = useState<{ [key: number]: boolean }>({});
   
   const [currentPage, setCurrentPage] = useState<Page>('home');
 
-  // User and Auth State
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+  // User and Auth State - Mocked for open access
+  const [user, setUser] = useState<User | null>({
+      name: 'Guest',
+      email: 'guest@logogen.com',
+      plan: 'pro', // Pro plan to unlock all features
+      generationsUsed: 0,
+      generationLimit: Infinity,
+  });
   const [logoHistory, setLogoHistory] = useState<LogoAsset[]>([]);
 
-  // Stripe State
-  const [isRedirectingToStripe, setIsRedirectingToStripe] = useState(false);
-  const [showUpgradeSuccess, setShowUpgradeSuccess] = useState(false);
-
-
-  const handleInitialGenerate = useCallback(async () => {
-    // 1. Check authentication
-    if (!isAuthenticated || !user) {
-        openSignupModal();
-        return;
-    }
-    
-    // 2. Check plan limits
-    if (user.plan === 'free' && user.generationsUsed >= user.generationLimit) {
-        setApiError(`You've reached your generation limit of ${user.generationLimit}. Please upgrade for unlimited generations.`);
-        setCurrentPage('pricing');
-        return;
-    }
-
-    const industryForPrompt = selectedIndustry?.name === 'Others' && customIndustry.trim() 
-      ? { ...selectedIndustry, name: customIndustry.trim() } 
-      : selectedIndustry;
-      
-    const colorsForPrompt = selectedColors.map(c => ({ name: c.name }));
-
-    const params: LogoGenerationParams = { name: logoName, slogan, industry: industryForPrompt, colors: colorsForPrompt, fonts: selectedFonts };
+  const runGenerationProcess = useCallback(async (baseParams: LogoGenerationParams) => {
     setGenerationStatus('generating');
     setApiError(null);
     setLogoVariations([]);
 
     try {
       const variationPrompts = [
-        {...params, prompt: "A minimal and abstract icon."},
-        {...params, prompt: "A detailed and illustrative icon."},
-        {...params, prompt: "A modern, geometric wordmark."},
-        {...params, prompt: "A classic and elegant emblem."}
+        {...baseParams, prompt: "A minimal and abstract icon."},
+        {...baseParams, prompt: "A detailed and illustrative icon."},
+        {...baseParams, prompt: "A modern, geometric wordmark."},
+        {...baseParams, prompt: "A classic and elegant emblem."}
       ];
       
       const generatedVariations: Variation[] = [];
@@ -85,6 +64,7 @@ const App: React.FC = () => {
 
       for (const p of variationPrompts) {
         const imageUrl = await generateLogo(p);
+        
         const newVariation = { prompt: p, imageUrl };
         generatedVariations.push(newVariation);
 
@@ -100,66 +80,83 @@ const App: React.FC = () => {
       }
 
       setLogoHistory(prev => [...newLogoAssets, ...prev]);
-      setUser(currentUser => currentUser ? { ...currentUser, generationsUsed: currentUser.generationsUsed + variationPrompts.length } : null);
-      
       setGenerationStatus('results');
 
     } catch (error) {
        console.error('Logo generation failed:', error);
-       setApiError('Sorry, we couldn\'t generate your logos. Please try again.');
+       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred. Please try again.';
+       setApiError(`Sorry, we couldn't generate your logos. ${errorMessage}`);
        setGenerationStatus('idle');
     }
-  }, [logoName, slogan, selectedIndustry, customIndustry, selectedColors, selectedFonts, isAuthenticated, user]);
+  }, []); // State setters are stable
+
+  const handleInitialGenerate = useCallback(async () => {
+    const industryForPrompt = selectedIndustry?.name === 'Others' && customIndustry.trim() 
+      ? { ...selectedIndustry, name: customIndustry.trim() } 
+      : selectedIndustry;
+      
+    const colorsForPrompt = selectedColors.map(c => ({ name: c.name }));
+
+    const params: LogoGenerationParams = { 
+        name: logoName, 
+        slogan, 
+        industry: industryForPrompt, 
+        colors: colorsForPrompt, 
+        fonts: selectedFonts, 
+        referenceImage,
+        style: logoStyle,
+        layout,
+        iconDescription,
+    };
+    
+    await runGenerationProcess(params);
+
+  }, [logoName, slogan, selectedIndustry, customIndustry, selectedColors, selectedFonts, referenceImage, logoStyle, layout, iconDescription, runGenerationProcess]);
+
+  const handleGenerateSimilar = useCallback(async (baseVariation: Variation) => {
+    const params: LogoGenerationParams = {
+        ...baseVariation.prompt,
+        referenceImage: baseVariation.imageUrl, // Use the selected image as reference
+    };
+    await runGenerationProcess(params);
+  }, [runGenerationProcess]);
+
+  const handleRemoveBackground = useCallback(async (index: number) => {
+    setIsRemovingBg(prev => ({ ...prev, [index]: true }));
+    try {
+        const originalUrl = logoVariations[index].imageUrl;
+        const transparentUrl = await removeImageBackground(originalUrl);
+
+        setLogoVariations(prev => {
+            const newVariations = [...prev];
+            newVariations[index] = { ...newVariations[index], imageUrl: transparentUrl };
+            return newVariations;
+        });
+    } catch (error) {
+        console.error('Failed to remove background:', error);
+        setApiError('Sorry, we couldn\'t remove the background. Please try again.');
+    } finally {
+        setIsRemovingBg(prev => ({ ...prev, [index]: false }));
+    }
+  }, [logoVariations]);
+
+  const handleBackToForm = () => {
+      setGenerationStatus('idle');
+  };
 
   const handleSelectForEditing = (item: Variation | LogoAsset) => {
-    const imageLayer: ImageElement = {
-        id: `image-${Date.now()}`,
-        type: 'image',
-        src: item.imageUrl,
-        x: 10, y: 10, width: 80, height: 80,
-        zIndex: 0,
-    };
-    const fullHistoryItem: HistoryItem = {
-      prompt: item.prompt,
-      layers: [imageLayer],
-      background: { type: 'color', value: '#FFFFFF' },
-    };
-    setHistory([fullHistoryItem]);
-    setHistoryIndex(0);
+    setEditingImageUrl(item.imageUrl);
     setGenerationStatus('editing');
     setCurrentPage('home');
   };
 
-  const handleImageUpload = (imageUrl: string) => {
-    if (!isAuthenticated) {
-        openSignupModal();
-        return;
-    }
-     const imageLayer: ImageElement = {
-        id: `image-${Date.now()}`,
-        type: 'image',
-        src: imageUrl,
-        x: 10, y: 10, width: 80, height: 80,
-        zIndex: 0,
-    };
-    const uploadItem: HistoryItem = {
-      prompt: { name: 'Uploaded Logo', slogan: '', colors: [], fonts: [], industry: null },
-      layers: [imageLayer],
-      background: { type: 'color', value: '#FFFFFF' },
-    };
-    setHistory([uploadItem]);
-    setHistoryIndex(0);
-    setGenerationStatus('editing');
-  };
-
   const handleBackToResults = () => {
+    setEditingImageUrl(null);
     if (logoVariations.length > 0) {
         setGenerationStatus('results');
     } else {
         handleStartOver();
     }
-    setHistory([]);
-    setHistoryIndex(-1);
   };
   
   const handleStartOver = () => {
@@ -169,61 +166,15 @@ const App: React.FC = () => {
     setCustomIndustry('');
     setSelectedColors([]);
     setSelectedFonts([]);
+    setReferenceImage('');
+    setLogoStyle('');
+    setLayout('icon-top');
+    setIconDescription('');
     setApiError(null);
-    setHistory([]);
-    setHistoryIndex(-1);
+    setEditingImageUrl(null);
     setLogoVariations([]);
     setGenerationStatus('idle');
     setCurrentPage('home');
-  };
-
-  const handleUndo = () => {
-    if (historyIndex > 0) setHistoryIndex(historyIndex - 1);
-  };
-
-  const handleRedo = () => {
-    if (historyIndex < history.length - 1) setHistoryIndex(historyIndex - 1);
-  };
-
-  const addHistoryItem = (item: HistoryItem) => {
-    const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push(item);
-    setHistory(newHistory);
-    setHistoryIndex(newHistory.length - 1);
-  };
-  
-  const currentHistoryItem = history[historyIndex];
-
-  // Auth Handlers
-  const handleLoginSuccess = () => {
-      setIsAuthenticated(true);
-      // MOCK USER DATA
-      setUser({
-          name: 'Alex',
-          email: 'alex@example.com',
-          plan: 'free',
-          generationsUsed: 0,
-          generationLimit: 10,
-          stripeCustomerId: 'cus_mock_12345',
-      });
-      setIsLoginModalOpen(false);
-      setIsSignupModalOpen(false);
-  };
-
-  const handleLogout = () => {
-      setIsAuthenticated(false);
-      setUser(null);
-      setCurrentPage('home');
-  };
-
-  const openLoginModal = () => {
-      setIsSignupModalOpen(false);
-      setIsLoginModalOpen(true);
-  };
-
-  const openSignupModal = () => {
-      setIsLoginModalOpen(false);
-      setIsSignupModalOpen(true);
   };
   
   const handleNavigate = (page: Page) => {
@@ -231,49 +182,6 @@ const App: React.FC = () => {
           handleStartOver();
       } else {
           setCurrentPage(page);
-      }
-  };
-
-  // Stripe Handlers
-  const handleUpgradeToPro = async () => {
-    if (!user) { openSignupModal(); return; }
-    
-    setIsRedirectingToStripe(true);
-    try {
-        await createCheckoutSession('pro_monthly'); // Mock API call
-        // Simulate redirect and successful payment callback
-        await new Promise(resolve => setTimeout(resolve, 2500));
-
-        setUser(currentUser => currentUser ? {
-            ...currentUser,
-            plan: 'pro',
-            generationLimit: Infinity,
-            generationsUsed: 0,
-        } : null);
-        
-        setShowUpgradeSuccess(true);
-        setCurrentPage('dashboard');
-    } catch (error) {
-        console.error("Stripe checkout simulation failed", error);
-        setApiError("Could not connect to checkout. Please try again later.");
-    } finally {
-        setIsRedirectingToStripe(false);
-    }
-  };
-
-  const handleManageSubscription = async () => {
-      if (!user?.stripeCustomerId) return;
-      setIsRedirectingToStripe(true);
-      try {
-          const { url } = await createCustomerPortalSession(user.stripeCustomerId);
-          // In a real app, this would be: window.location.href = url;
-          // For the mock, we simulate by opening a blank tab.
-          window.open(url, '_blank');
-      } catch (error) {
-          console.error("Stripe portal simulation failed", error);
-          setApiError("Could not open subscription management. Please try again.");
-      } finally {
-          setIsRedirectingToStripe(false);
       }
   };
 
@@ -295,9 +203,13 @@ const App: React.FC = () => {
                   variations={logoVariations}
                   onEdit={handleSelectForEditing}
                   onRegenerateAll={handleInitialGenerate}
+                  onGenerateSimilar={handleGenerateSimilar}
+                  onBackToForm={handleBackToForm}
                   onStartOver={handleStartOver}
                   isLoading={generationStatus === 'generating'}
                   user={user}
+                  onRemoveBackground={handleRemoveBackground}
+                  removingBgStates={isRemovingBg}
                 />
               );
             }
@@ -323,9 +235,16 @@ const App: React.FC = () => {
                         setSelectedColors={setSelectedColors}
                         selectedFonts={selectedFonts}
                         setSelectedFonts={setSelectedFonts}
+                        referenceImage={referenceImage}
+                        setReferenceImage={setReferenceImage}
                         onGenerate={handleInitialGenerate}
                         isLoading={generationStatus === 'generating'}
-                        onImageUpload={handleImageUpload}
+                        logoStyle={logoStyle}
+                        setLogoStyle={setLogoStyle}
+                        layout={layout}
+                        setLayout={setLayout}
+                        iconDescription={iconDescription}
+                        setIconDescription={setIconDescription}
                     />
                     {apiError && (
                         <p className="mt-4 text-red-600 font-semibold">{apiError}</p>
@@ -339,34 +258,27 @@ const App: React.FC = () => {
               </>
             );
         case 'pricing':
-            return <PricingPage onUpgrade={handleUpgradeToPro} isProcessing={isRedirectingToStripe} />;
+            return <PricingPage />;
         case 'how-it-works':
             return <HowItWorksPage onGetStarted={() => setCurrentPage('home')} />;
         case 'faq':
             return <FaqPage />;
         case 'dashboard':
             if (!user) {
-                useEffect(() => { setCurrentPage('home'); openLoginModal(); }, []);
+                useEffect(() => { setCurrentPage('home'); }, []);
                 return null;
             }
-            return <DashboardPage user={user} setUser={setUser} logoHistory={logoHistory} onEditLogo={handleSelectForEditing} onUpgradePlan={handleUpgradeToPro} onManageSubscription={handleManageSubscription} />;
+            return <DashboardPage user={user} setUser={setUser} logoHistory={logoHistory} onEditLogo={handleSelectForEditing} onUpgradePlan={() => {}} onManageSubscription={() => {}} />;
         default:
             return null;
     }
   };
   
-  if (currentPage === 'home' && generationStatus === 'editing' && currentHistoryItem) {
+  if (currentPage === 'home' && generationStatus === 'editing' && editingImageUrl) {
     return (
-        <LogoEditor
-            key={historyIndex}
-            historyItem={currentHistoryItem}
-            onStartOver={handleBackToResults}
-            onUndo={handleUndo}
-            canUndo={historyIndex > 0}
-            onRedo={handleRedo}
-            canRedo={historyIndex < history.length - 1}
-            onHistoryChange={addHistoryItem}
-            user={user}
+        <ThirdPartyEditor
+            imageUrl={editingImageUrl}
+            onBack={handleBackToResults}
         />
     );
   }
@@ -377,10 +289,6 @@ const App: React.FC = () => {
       <div className="relative z-10">
         <Header 
           onNavigate={handleNavigate}
-          isAuthenticated={isAuthenticated}
-          onLoginClick={openLoginModal}
-          onSignupClick={openSignupModal}
-          onLogoutClick={handleLogout}
         />
         <main className={`container mx-auto px-4 transition-all duration-300 ${
           (currentPage === 'home' && (generationStatus === 'results' || (generationStatus === 'generating' && logoVariations.length > 0))) 
@@ -391,26 +299,6 @@ const App: React.FC = () => {
         </main>
       </div>
 
-      <AuthModal 
-        isOpen={isLoginModalOpen}
-        onClose={() => setIsLoginModalOpen(false)}
-        mode="login"
-        onSwitchMode={openSignupModal}
-        onSuccess={handleLoginSuccess}
-      />
-      <AuthModal 
-        isOpen={isSignupModalOpen}
-        onClose={() => setIsSignupModalOpen(false)}
-        mode="signup"
-        onSwitchMode={openLoginModal}
-        onSuccess={handleLoginSuccess}
-      />
-
-      {isRedirectingToStripe && <StripeRedirectOverlay />}
-      <UpgradeSuccessModal 
-        isOpen={showUpgradeSuccess}
-        onClose={() => setShowUpgradeSuccess(false)}
-      />
     </div>
   );
 };

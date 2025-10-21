@@ -40,6 +40,11 @@ export { default as GeometricIcon } from './GeometricIcon';
 export { default as AbstractIcon } from './AbstractIcon';
 export { default as VintageIcon } from './VintageIcon';
 export { default as FuturisticIcon } from './FuturisticIcon';
+export { default as ThreeDIcon } from './ThreeDIcon';
+export { default as NeonIcon } from './NeonIcon';
+export { default as WatercolorIcon } from './WatercolorIcon';
+export { default as HandDrawnIcon } from './HandDrawnIcon';
+
 
 // New Editor Panel Icons
 export { default as TextIcon } from './TextIcon';

@@ -11,13 +11,13 @@ const ColorSwatch: React.FC<PaletteSwatchProps> = ({ palette, isSelected, onSele
   return (
     <div
       onClick={onSelect}
-      className={`p-4 rounded-lg flex flex-col items-start gap-3 cursor-pointer border-2 transition-all ${
-        isSelected ? 'border-brand-primary bg-brand-primary/5' : 'border-gray-200 bg-gray-50 hover:bg-gray-100 hover:border-gray-300'
+      className={`p-3 rounded-lg flex flex-col items-start gap-3 cursor-pointer border-2 transition-all ${
+        isSelected ? 'border-brand-primary bg-brand-primary/5' : 'border-gray-200 bg-white hover:border-gray-300'
       }`}
     >
-      <div className="flex items-center gap-2">
+      <div className="w-full h-16 rounded-md overflow-hidden flex shadow-inner">
         {palette.colors.map(color => (
-          <div key={color.hex} className="w-6 h-6 rounded-full border border-gray-300 shadow-inner" style={{ backgroundColor: color.hex }} />
+            <div key={color.hex} className="flex-1 h-full transition-all" style={{ backgroundColor: color.hex }} />
         ))}
       </div>
       <div>

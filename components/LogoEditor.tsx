@@ -11,7 +11,6 @@ import DraggableText from './DraggableText';
 import DraggableShape from './DraggableShape';
 import DraggableImage from './DraggableImage';
 import ImageDisplay from './ImageDisplay';
-import Watermark from './Watermark';
 
 interface LogoEditorProps {
     historyItem: HistoryItem;
@@ -211,7 +210,6 @@ const LogoEditor: React.FC<LogoEditorProps> = (props) => {
     }
     
     const isGeneratingMockup = isProcessing && processingLabel.includes('mockup');
-    const showWatermark = user?.plan === 'free';
 
     return (
         <div className="w-full h-screen bg-gray-100 flex flex-col animate-fade-in-down">
@@ -287,7 +285,6 @@ const LogoEditor: React.FC<LogoEditorProps> = (props) => {
                                     return null;
                                 })}
                             </div>
-                            {showWatermark && <Watermark />}
                             {isProcessing && !isGeneratingMockup && <LoadingOverlay label={processingLabel}/>}
                         </div>
                         

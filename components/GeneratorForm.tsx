@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { BrandColor, FontStyle, Industry, ColorPalette } from '../types';
-import { industries, brandColors, fontStyles, colorPalettes } from './data';
+import { BrandColor, FontStyle, Industry, ColorPalette, LogoGenerationParams } from '../types';
+import { industries, brandColors, fontStyles, colorPalettes, logoStyles } from './data';
 import IndustryCard from './IndustryCard';
 import FontPreview from './FontPreview';
 import LoadingSpinner from './LoadingSpinner';
 import ImageUploader from './ImageUploader';
 import Tooltip from './Tooltip';
 import ColorSwatch from './ColorSwatch';
+import { TrashIcon } from './icons';
 
 const CheckIcon: React.FC<{className?: string}> = ({className}) => (
   <svg
@@ -37,34 +38,51 @@ interface GeneratorFormProps {
   setSelectedColors: React.Dispatch<React.SetStateAction<BrandColor[]>>;
   selectedFonts: FontStyle[];
   setSelectedFonts: React.Dispatch<React.SetStateAction<FontStyle[]>>;
+  referenceImage: string;
+  setReferenceImage: (image: string) => void;
   onGenerate: () => void;
   isLoading: boolean;
-  onImageUpload: (imageUrl: string) => void;
+  logoStyle: string;
+  setLogoStyle: (style: string) => void;
+  layout: LogoGenerationParams['layout'];
+  setLayout: (layout: LogoGenerationParams['layout']) => void;
+  iconDescription: string;
+  setIconDescription: (desc: string) => void;
 }
 
-const GeneratorForm: React.FC<GeneratorFormProps> = ({
-  logoName,
-  setLogoName,
-  slogan,
-  setSlogan,
-  selectedIndustry,
-  setSelectedIndustry,
-  customIndustry,
-  setCustomIndustry,
-  selectedColors,
-  setSelectedColors,
-  selectedFonts,
-  setSelectedFonts,
-  onGenerate,
-  isLoading,
-  onImageUpload,
-}) => {
+const ProgressBar: React.FC<{currentStep: number, totalSteps: number}> = ({ currentStep, totalSteps }) => {
+    const percentage = (currentStep / totalSteps) * 100;
+    return (
+        <div className="w-full bg-gray-200 rounded-full h-2 mb-8">
+            <div className="bg-brand-primary h-2 rounded-full transition-all duration-300" style={{ width: `${percentage}%` }}></div>
+        </div>
+    );
+};
+
+const GeneratorForm: React.FC<GeneratorFormProps> = (props) => {
+  const {
+    logoName, setLogoName, slogan, setSlogan,
+    selectedIndustry, setSelectedIndustry, customIndustry, setCustomIndustry,
+    selectedColors, setSelectedColors, selectedFonts, setSelectedFonts,
+    referenceImage, setReferenceImage,
+    onGenerate, isLoading,
+    logoStyle, setLogoStyle,
+    layout, setLayout,
+    iconDescription, setIconDescription,
+  } = props;
+    
+  const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [customColor, setCustomColor] = useState('#6336E4');
   const [fontFilter, setFontFilter] = useState('All');
 
-  const fontStyleTags = ['All', 'Serif', 'Sans-Serif', 'Display', 'Handwriting', 'Modern', 'Elegant', 'Bold', 'Minimalist', 'Fun', 'Classic'];
+  const totalSteps = 7;
 
+  const fontStyleTags = ['All', 'Serif', 'Sans-Serif', 'Display', 'Handwriting', 'Modern', 'Elegant', 'Bold', 'Minimalist', 'Fun', 'Classic', 'Futuristic'];
+
+  const nextStep = () => setStep(s => Math.min(s + 1, totalSteps));
+  const prevStep = () => setStep(s => Math.max(s - 1, 1));
+  
   const getBrightness = (hex: string): number => {
     if (hex.length === 4) {
       hex = `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`;
@@ -94,6 +112,7 @@ const GeneratorForm: React.FC<GeneratorFormProps> = ({
   const handleGenerateClick = () => {
     if (!logoName.trim()) {
       setError('Please enter a logo name to continue.');
+      setStep(1); // Go back to the first step to fix error
       return;
     }
     setError(null);
@@ -124,88 +143,186 @@ const GeneratorForm: React.FC<GeneratorFormProps> = ({
   const filteredFonts = fontFilter === 'All'
       ? fontStyles
       : fontStyles.filter(font => font.tags.includes(fontFilter));
+      
+  const stepTitles: { [key: number]: string } = {
+    1: 'What is your brand\'s name?',
+    2: 'Describe your icon & layout (Optional)',
+    3: 'Choose a logo style (Optional)',
+    4: 'Please Select an Industry (Optional)',
+    5: 'Select Your Brand Colors (Optional)',
+    6: 'Select Font Styles You Like (Optional)',
+    7: 'Have a reference? (Optional)',
+  };
+  
+  const layoutOptions: { id: NonNullable<LogoGenerationParams['layout']>; label: string; }[] = [
+    { id: 'icon-top', label: 'Icon on Top' },
+    { id: 'icon-left', label: 'Icon on Left' },
+    { id: 'icon-right', label: 'Icon on Right' },
+  ];
+
+  const compositionOptions: { id: NonNullable<LogoGenerationParams['layout']>; label: string; }[] = [
+      { id: 'icon-top', label: 'Icon + Text' },
+      { id: 'icon-only', label: 'Icon Only' },
+      { id: 'text-only', label: 'Text Only' },
+  ];
 
 
   return (
     <div className="max-w-5xl mx-auto mt-12">
         <div className="bg-white rounded-2xl shadow-soft p-6 sm:p-10 text-left">
+            <ProgressBar currentStep={step} totalSteps={totalSteps} />
+            <h3 className="font-bold text-2xl text-brand-secondary mb-6">{stepTitles[step]}</h3>
+
             <div className="space-y-12">
                 {/* Step 1: Logo Name */}
-                <div>
-                <h3 className="font-bold text-2xl text-brand-secondary mb-2">Step 1: Logo Name</h3>
-                <div className="grid sm:grid-cols-2 gap-6">
-                    <div>
-                    <label htmlFor="logoName" className="font-semibold text-gray-700 block mb-2">Enter your logo name</label>
-                    <div className={`p-[2px] rounded-lg bg-gradient-to-r transition-all focus-within:ring-4 ${
-                        error
-                        ? 'from-red-400 to-pink-400 focus-within:ring-red-500/30'
-                        : 'from-[#00c4cc] to-[#7d2ae8] focus-within:ring-[#7d2ae8]/30'
-                    }`}>
-                        <input
-                        type="text"
-                        id="logoName"
-                        value={logoName}
-                        onChange={(e) => {
-                            setLogoName(e.target.value);
-                            if (error) setError(null);
-                        }}
-                        placeholder="Your Brand Name"
-                        className="w-full px-4 py-3 rounded-[6px] border-0 bg-gray-50 focus:bg-white focus:outline-none text-gray-900 placeholder:text-gray-400"
-                        />
-                    </div>
-                    {error && <p className="text-red-600 text-sm font-semibold mt-2 animate-fade-in-down">{error}</p>}
-                    </div>
-                    <div>
-                    <label htmlFor="slogan" className="font-semibold text-gray-700 block mb-2">Slogan (optional)</label>
-                    <div className="p-[2px] rounded-lg bg-gradient-to-r from-[#00c4cc] to-[#7d2ae8] transition-all focus-within:ring-4 focus-within:ring-[#7d2ae8]/30">
-                        <input
-                        type="text"
-                        id="slogan"
-                        value={slogan}
-                        onChange={(e) => setSlogan(e.target.value)}
-                        placeholder="Your Slogan"
-                        className="w-full px-4 py-3 rounded-[6px] border-0 bg-gray-50 focus:bg-white focus:outline-none text-gray-900 placeholder:text-gray-400"
-                        />
-                    </div>
-                    </div>
-                </div>
-                </div>
-
-                {/* Step 2: Industry */}
-                <div>
-                <h3 className="font-bold text-2xl text-brand-secondary mb-2">Step 2: Please Select an Industry</h3>
-                <p className="text-gray-600 mb-6">This will help us find logo types and styles that fit your brand.</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                    {industries.map((industry) => (
-                    <IndustryCard
-                        key={industry.name}
-                        industry={industry}
-                        isSelected={selectedIndustry?.name === industry.name}
-                        onSelect={() => setSelectedIndustry(industry)}
-                    />
-                    ))}
-                </div>
-                {selectedIndustry?.name === 'Others' && (
-                  <div className="mt-6 animate-fade-in-down">
-                      <label htmlFor="customIndustry" className="font-semibold text-gray-700 block mb-2">Industry not listed? (optional)</label>
-                      <div className="p-[2px] rounded-lg bg-gradient-to-r from-[#00c4cc] to-[#7d2ae8] transition-all focus-within:ring-4 focus-within:ring-[#7d2ae8]/30">
+                {step === 1 && (
+                <div className="animate-fade-in-down">
+                  <div className="grid sm:grid-cols-2 gap-6">
+                      <div>
+                      <label htmlFor="logoName" className="font-semibold text-gray-700 block mb-2">Enter your logo name</label>
+                      <div className={`p-[2px] rounded-lg bg-gradient-to-r transition-all focus-within:ring-4 ${
+                          error
+                          ? 'from-red-400 to-pink-400 focus-within:ring-red-500/30'
+                          : 'from-[#00c4cc] to-[#7d2ae8] focus-within:ring-[#7d2ae8]/30'
+                      }`}>
                           <input
-                              type="text"
-                              id="customIndustry"
-                              value={customIndustry}
-                              onChange={(e) => setCustomIndustry(e.target.value)}
-                              placeholder="e.g., Sustainable Fashion"
-                              className="w-full px-4 py-3 rounded-[6px] border-0 bg-gray-50 focus:bg-white focus:outline-none text-gray-900 placeholder:text-gray-400"
+                          type="text"
+                          id="logoName"
+                          value={logoName}
+                          onChange={(e) => {
+                              setLogoName(e.target.value);
+                              if (error) setError(null);
+                          }}
+                          placeholder="Your Brand Name"
+                          className="w-full px-4 py-3 rounded-[6px] border-0 bg-gray-50 focus:bg-white focus:outline-none text-gray-900 placeholder:text-gray-400"
                           />
                       </div>
+                      {error && <p className="text-red-600 text-sm font-semibold mt-2 animate-fade-in-down">{error}</p>}
+                      </div>
+                      <div>
+                      <label htmlFor="slogan" className="font-semibold text-gray-700 block mb-2">Slogan (optional)</label>
+                      <div className="p-[2px] rounded-lg bg-gradient-to-r from-[#00c4cc] to-[#7d2ae8] transition-all focus-within:ring-4 focus-within:ring-[#7d2ae8]/30">
+                          <input
+                          type="text"
+                          id="slogan"
+                          value={slogan}
+                          onChange={(e) => setSlogan(e.target.value)}
+                          placeholder="Your Slogan"
+                          className="w-full px-4 py-3 rounded-[6px] border-0 bg-gray-50 focus:bg-white focus:outline-none text-gray-900 placeholder:text-gray-400"
+                          />
+                      </div>
+                      </div>
                   </div>
-                )}
                 </div>
+                )}
+                
+                {/* Step 2: Icon & Layout */}
+                {step === 2 && (
+                    <div className="animate-fade-in-down">
+                        <label htmlFor="iconDescription" className="font-semibold text-gray-700 block mb-2">Describe your desired icon</label>
+                        <div className="p-[2px] rounded-lg bg-gradient-to-r from-[#00c4cc] to-[#7d2ae8] transition-all focus-within:ring-4 focus-within:ring-[#7d2ae8]/30">
+                            <input
+                                type="text"
+                                id="iconDescription"
+                                value={iconDescription}
+                                onChange={(e) => setIconDescription(e.target.value)}
+                                placeholder="e.g., a majestic lion's head, an abstract geometric wave"
+                                className="w-full px-4 py-3 rounded-[6px] border-0 bg-gray-50 focus:bg-white focus:outline-none text-gray-900 placeholder:text-gray-400"
+                            />
+                        </div>
+                        
+                        <div className="mt-6">
+                            <label className="font-semibold text-gray-700 block mb-2">Composition</label>
+                            <div className="flex flex-wrap gap-2">
+                                {compositionOptions.map(opt => (
+                                    <button
+                                        key={opt.id}
+                                        onClick={() => setLayout(opt.id)}
+                                        className={`px-4 py-2 text-sm font-semibold rounded-full transition-colors ${
+                                            layout === opt.id || (layout !== 'icon-only' && layout !== 'text-only' && opt.id === 'icon-top')
+                                            ? 'bg-brand-primary text-white shadow'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
 
-                {/* Step 3: Color Scheme */}
-                <div>
-                  <h3 className="font-bold text-2xl text-brand-secondary mb-4">Step 3: Select Your Brand Colors</h3>
-                  
+                        {layout !== 'icon-only' && layout !== 'text-only' && (
+                            <div className="mt-6 animate-fade-in">
+                                <label className="font-semibold text-gray-700 block mb-2">Icon Position</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {layoutOptions.map(opt => (
+                                        <button
+                                            key={opt.id}
+                                            onClick={() => setLayout(opt.id)}
+                                            className={`px-4 py-2 text-sm font-semibold rounded-full transition-colors ${
+                                                layout === opt.id
+                                                ? 'bg-brand-primary text-white shadow'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                            }`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+                
+                {/* Step 3: Style */}
+                {step === 3 && (
+                     <div className="animate-fade-in-down">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                            {logoStyles.map((style) => (
+                                <IndustryCard
+                                    key={style.name}
+                                    industry={style}
+                                    isSelected={logoStyle === style.name}
+                                    onSelect={() => setLogoStyle(style.name)}
+                                />
+                            ))}
+                        </div>
+                     </div>
+                )}
+
+                {/* Step 4: Industry */}
+                {step === 4 && (
+                <div className="animate-fade-in-down">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                      {industries.map((industry) => (
+                      <IndustryCard
+                          key={industry.name}
+                          industry={industry}
+                          isSelected={selectedIndustry?.name === industry.name}
+                          onSelect={() => setSelectedIndustry(industry)}
+                      />
+                      ))}
+                  </div>
+                  {selectedIndustry?.name === 'Others' && (
+                    <div className="mt-6 animate-fade-in-down">
+                        <label htmlFor="customIndustry" className="font-semibold text-gray-700 block mb-2">Industry not listed? (optional)</label>
+                        <div className="p-[2px] rounded-lg bg-gradient-to-r from-[#00c4cc] to-[#7d2ae8] transition-all focus-within:ring-4 focus-within:ring-[#7d2ae8]/30">
+                            <input
+                                type="text"
+                                id="customIndustry"
+                                value={customIndustry}
+                                onChange={(e) => setCustomIndustry(e.target.value)}
+                                placeholder="e.g., Sustainable Fashion"
+                                className="w-full px-4 py-3 rounded-[6px] border-0 bg-gray-50 focus:bg-white focus:outline-none text-gray-900 placeholder:text-gray-400"
+                            />
+                        </div>
+                    </div>
+                  )}
+                </div>
+                )}
+                
+                {/* Step 5: Color Scheme */}
+                {step === 5 && (
+                <div className="animate-fade-in-down">
                   {selectedColors.length > 0 && (
                       <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                           <h4 className="font-semibold text-gray-800 mb-3">Your Palette:</h4>
@@ -284,12 +401,11 @@ const GeneratorForm: React.FC<GeneratorFormProps> = ({
                     </div>
                   </div>
                 </div>
+                )}
 
-                {/* Step 4: Font Style */}
-                <div>
-                  <h3 className="font-bold text-2xl text-brand-secondary mb-2">Step 4: Select Font Styles You Like</h3>
-                  <p className="text-gray-600 mb-6">Choose one or more fonts that match your brand's personality.</p>
-
+                {/* Step 6: Font Style */}
+                {step === 6 && (
+                <div className="animate-fade-in-down">
                   <div className="flex flex-wrap gap-2 mb-6">
                     {fontStyleTags.map(tag => (
                       <button
@@ -305,7 +421,6 @@ const GeneratorForm: React.FC<GeneratorFormProps> = ({
                       </button>
                     ))}
                   </div>
-
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                       {filteredFonts.map((font) => (
                           <FontPreview 
@@ -318,36 +433,72 @@ const GeneratorForm: React.FC<GeneratorFormProps> = ({
                       ))}
                   </div>
                 </div>
+                )}
 
-                {/* Generate Button */}
-                <div className="text-center pt-6">
-                <button
-                    onClick={handleGenerateClick}
-                    disabled={!logoName.trim() || isLoading}
-                    className="text-white font-bold text-lg px-12 py-4 rounded-full bg-gradient-to-r from-brand-primary to-brand-light hover:shadow-lg hover:scale-105 transform transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 disabled:shadow-none flex items-center justify-center mx-auto"
-                >
-                    {isLoading ? (
-                    <>
-                        <LoadingSpinner />
-                        Generating...
-                    </>
+                {/* Step 7: Reference Image */}
+                {step === 7 && (
+                  <div className="animate-fade-in-down">
+                    <p className="text-gray-600 mb-6">Upload a logo you like, and our AI will generate new ideas with a similar style, color, or composition.</p>
+                    {referenceImage ? (
+                        <div className="relative w-48 h-48 mx-auto border rounded-lg p-2">
+                            <img src={referenceImage} alt="Reference" className="w-full h-full object-contain" />
+                            <button 
+                                onClick={() => setReferenceImage('')}
+                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600"
+                            >
+                                <TrashIcon className="w-5 h-5"/>
+                            </button>
+                        </div>
                     ) : (
-                    'Generate Logo'
+                        <ImageUploader onUpload={setReferenceImage} />
                     )}
-                </button>
+                  </div>
+                )}
+
+
+                {/* Navigation */}
+                <div className="flex justify-between items-center pt-6 mt-8 border-t border-gray-200">
+                    <button
+                        onClick={prevStep}
+                        disabled={step === 1}
+                        className="font-bold text-gray-600 px-6 py-3 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Back
+                    </button>
+
+                    {step < totalSteps ? (
+                        <div className="flex items-center gap-4">
+                             <button
+                                onClick={nextStep}
+                                className="font-bold text-gray-600 px-6 py-3 rounded-full hover:bg-gray-100 transition-colors"
+                            >
+                                Skip
+                            </button>
+                            <button
+                                onClick={nextStep}
+                                className="text-white font-bold px-8 py-3 rounded-full bg-brand-primary hover:opacity-90 transition-opacity"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={handleGenerateClick}
+                            disabled={!logoName.trim() || isLoading}
+                            className="text-white font-bold text-lg px-12 py-4 rounded-full bg-gradient-to-r from-brand-primary to-brand-light hover:shadow-lg hover:scale-105 transform transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 disabled:shadow-none flex items-center justify-center"
+                        >
+                            {isLoading ? (
+                            <>
+                                <LoadingSpinner />
+                                Generating...
+                            </>
+                            ) : (
+                            'Generate Logo'
+                            )}
+                        </button>
+                    )}
                 </div>
             </div>
-        </div>
-
-        <div className="relative my-8 flex items-center">
-            <div className="flex-grow border-t border-gray-300"></div>
-            <span className="flex-shrink mx-4 text-gray-500 font-semibold">OR</span>
-            <div className="flex-grow border-t border-gray-300"></div>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow-soft p-6 sm:p-10 text-left">
-            <h3 className="font-bold text-2xl text-brand-secondary mb-4 text-center">Upload Your Own Logo</h3>
-            <ImageUploader onUpload={onImageUpload} />
         </div>
     </div>
   );
